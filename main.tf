@@ -26,11 +26,12 @@ resource "kubernetes_namespace" "sonarqubens" {
 resource "null_resource" "deploy_sonarqube_configmap" {
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl apply -f ./kubernetes/sonarqube-configmap.yaml \
-        --set data.SONARQUBE_JDBC_USERNAME=${var.postgresql_username} \
-        --set data.SONARQUBE_DB_NAME=${var.postgresql_database} \
-        --set data.SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
-        -n ${var.sonarqube_namespace}" \
+      kubectl create configmap external-sonarqube-opts \
+        --from-literal SONARQUBE_JDBC_USERNAME=${var.postgresql_username} \
+        --from-literal SONARQUBE_DB_NAME=${var.postgresql_database} \
+        --from-literal SONARQUBE_DB_HOST: postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
+        --from-literal SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
+        -n ${var.sonarqube_namespace}
       EOT
   }
   depends_on = [kubernetes_namespace.sonarqubens]
@@ -96,7 +97,7 @@ resource "helm_release" "postgresql" {
   name       = "postgresql"
   repository = var.postgresql_chart_repository
   chart      = var.postgresql_chart_name
-  version    = var.postgresql_chart_version
+  # version    = var.postgresql_chart_version
   namespace  = var.sonarqube_namespace
   depends_on = [kubernetes_namespace.sonarqubens, null_resource.deploy_postgresql_secret]
 

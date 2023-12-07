@@ -46,11 +46,11 @@ variable "postgresql_chart_repository" {
   default     = "oci://registry-1.docker.io/bitnamicharts"
 }
 
-variable "postgresql_chart_version" {
-  description = "Version of the PostgreSQL Helm chart"
-  type        = string
-  default     = "latest"  # Adjust the version based on your requirements
-}
+# variable "postgresql_chart_version" {
+#   description = "Version of the PostgreSQL Helm chart"
+#   type        = string
+#   default     = "latest"  # Adjust the version based on your requirements
+# }
 
 variable "postgresql_chart_name" {
   description = "Name of the PostgreSQL Helm chart"
