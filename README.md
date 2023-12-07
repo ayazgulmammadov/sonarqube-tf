@@ -34,15 +34,21 @@ This script automates the installation of essential DevOps tools on a Linux syst
 
 ## Usage
 
-1. **Run the installation script:**
+1. **The repository contains a deployment script `install-tools.sh`. Ensure it has execute permissions:**
+
+    ```bash
+    chmod +x install-tools.sh
+    ```
+
+2. **Run the installation script:**
 
     ```bash
     ./install_devops_tools.sh
     ```
 
-2. **Follow any on-screen instructions, if prompted.**
+3. **Follow any on-screen instructions, if prompted.**
 
-3. **After successful execution, reboot your operating system.**
+4. **After successful execution, reboot your operating system.**
 
 ## Tools Installed
 
