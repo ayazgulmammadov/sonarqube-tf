@@ -21,9 +21,8 @@ This repository provides scripts and configurations to deploy Sonarqube on a Min
   - `install-tools.sh`: Script to install all required DevOps tools if they don't exist.
 - Terraform configurations for Minikube environment setup.
   - `main.tf`: Main Terraform configuration file.
-- Kubernetes manifest files required for deployment and running Sonarqube and PostgreSQL in Minikube.
+- Kubernetes manifest files, located in the kubernetes folder, required for deployment and running Sonarqube and PostgreSQL in Minikube.
   - `postgresql-secret.yaml`: Secret configuration for PostgreSQL.
-  - `sonarqube-configmap.yaml`: ConfigMap for Sonarqube.
   - `sonarqube-ingress.yaml`: Ingress configuration for Sonarqube.
   - `sonarqube-secret.yaml`: Secret configuration for Sonarqube.
 

@@ -97,7 +97,6 @@ resource "helm_release" "postgresql" {
   name       = "postgresql"
   repository = var.postgresql_chart_repository
   chart      = var.postgresql_chart_name
-  # version    = var.postgresql_chart_version
   namespace  = var.sonarqube_namespace
   depends_on = [kubernetes_namespace.sonarqubens, null_resource.deploy_postgresql_secret]
 
