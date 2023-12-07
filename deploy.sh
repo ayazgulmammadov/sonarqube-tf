@@ -19,10 +19,10 @@ if [ $? -eq 0 ]; then
     terraform apply -auto-approve
     # Get Minikube IP
     minikubeip=$(minikube ip)
-    echo "$(minikube ip) sonarqube.local" | sudo tee -a /etc/hosts
+    echo "$(minikube ip) sonarqube.localhost" | sudo tee -a /etc/hosts
 
     # Print Sonarqube URL
-    echo "Sonarqube URL: http://sonarqube.local/"
+    echo "Sonarqube URL: http://sonarqube.localhost/"
 else
     echo "Terraform validation failed. Please fix the configuration before applying."
 fi
