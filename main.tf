@@ -1,73 +1,79 @@
 terraform {
   required_providers {
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "2.12.1"
     }
   }
 }
 
 provider "kubernetes" {
-  config_path = "~/.kube/config"  # Adjust the path based on your kubeconfig location
+  config_path = var.kubeconfig_path # Adjust the path based on your kubeconfig location
 }
 
 provider "helm" {
   kubernetes {
-    config_path = "~/.kube/config"  # Path to your Kubernetes config file
+    config_path = var.kubeconfig_path # Path to your Kubernetes config file
   }
 }
 
 resource "kubernetes_namespace" "sonarqubens" {
   metadata {
-    name = "sonarqubens"  # Set the desired namespace name
+    name = var.sonarqube_namespace # Set the desired namespace name
   }
 }
 
 resource "null_resource" "deploy_sonarqube_configmap" {
   provisioner "local-exec" {
-    command = "kubectl apply -f sonarqube-configmap.yaml -n sonarqubens"
+    command = <<-EOT
+      kubectl apply -f ./kubernetes/sonarqube-configmap.yaml \
+        --set data.SONARQUBE_JDBC_USERNAME=${var.postgresql_username} \
+        --set data.SONARQUBE_DB_NAME=${var.postgresql_database} \
+        --set data.SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
+        -n ${var.sonarqube_namespace}" \
+      EOT
   }
-  depends_on   = [kubernetes_namespace.sonarqubens]
+  depends_on = [kubernetes_namespace.sonarqubens]
 }
 
 resource "null_resource" "deploy_sonarqube_secret" {
   provisioner "local-exec" {
-    command = "kubectl apply -f sonarqube-secret.yaml -n sonarqubens"
+    command = "kubectl apply -f ./kubernetes/sonarqube-secret.yaml -n ${var.sonarqube_namespace}"
   }
-  depends_on   = [kubernetes_namespace.sonarqubens]
+  depends_on = [kubernetes_namespace.sonarqubens]
 }
 
 resource "null_resource" "deploy_postgresql_secret" {
   provisioner "local-exec" {
-    command = "kubectl apply -f postgresql-secret.yaml -n sonarqubens"
+    command = "kubectl apply -f ./kubernetes/postgresql-secret.yaml -n ${var.sonarqube_namespace}"
   }
-  depends_on   = [kubernetes_namespace.sonarqubens]
+  depends_on = [kubernetes_namespace.sonarqubens]
 }
 
 resource "null_resource" "deploy_sonarqube_ingress" {
   provisioner "local-exec" {
-    command = "kubectl apply -f sonarqube-ingress.yaml -n sonarqubens"
+    command = "kubectl apply -f ./kubernetes/sonarqube-ingress.yaml -n ${var.sonarqube_namespace}"
   }
-  depends_on   = [helm_release.sonarqube]
+  depends_on = [helm_release.sonarqube]
 }
 
 resource "helm_release" "sonarqube" {
   name       = "sonarqube"
-  repository = "https://oteemo.github.io/charts"
-  chart      = "sonarqube"
-  version    = "9.11.0"
-  namespace  = "sonarqubens"
-  depends_on   = [helm_release.postgresql, null_resource.deploy_sonarqube_configmap, null_resource.deploy_sonarqube_secret]
+  repository = var.sonarqube_chart_repository
+  chart      = var.sonarqube_chart_name
+  version    = var.sonarqube_chart_version
+  namespace  = var.sonarqube_namespace
+  depends_on = [helm_release.postgresql, null_resource.deploy_sonarqube_configmap, null_resource.deploy_sonarqube_secret]
 
-  
+
   set {
     name  = "resources.limits.memory"
-    value = "4Gi"
+    value = var.sonarqube_memory_limit
   }
 
   set {
     name  = "persistence.enabled"
-    value = "true"
+    value = var.sonarqube_persistence_enabled ? "true" : "false"
   }
 
   set {
@@ -88,23 +94,24 @@ resource "helm_release" "sonarqube" {
 
 resource "helm_release" "postgresql" {
   name       = "postgresql"
-  repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "postgresql"
-  namespace  = "sonarqubens"
-  depends_on   = [kubernetes_namespace.sonarqubens, null_resource.deploy_postgresql_secret]
+  repository = var.postgresql_chart_repository
+  chart      = var.postgresql_chart_name
+  version    = var.postgresql_chart_version
+  namespace  = var.sonarqube_namespace
+  depends_on = [kubernetes_namespace.sonarqubens, null_resource.deploy_postgresql_secret]
 
-  set{
-    name = "auth.username"
-    value = "sonarqubeuser"
+  set {
+    name  = "auth.username"
+    value = var.postgresql_username
   }
 
   set {
-    name = "auth.existingSecret"
+    name  = "auth.existingSecret"
     value = "postgresql-secret"
   }
 
-  set{
-    name = "auth.database"
-    value = "sonarqubedb"
+  set {
+    name  = "auth.database"
+    value = var.postgresql_database
   }
 }
