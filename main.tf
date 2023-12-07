@@ -29,7 +29,7 @@ resource "null_resource" "deploy_sonarqube_configmap" {
       kubectl create configmap external-sonarqube-opts \
         --from-literal SONARQUBE_JDBC_USERNAME=${var.postgresql_username} \
         --from-literal SONARQUBE_DB_NAME=${var.postgresql_database} \
-        --from-literal SONARQUBE_DB_HOST: postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
+        --from-literal SONARQUBE_DB_HOST=postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
         --from-literal SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
         -n ${var.sonarqube_namespace}
       EOT
