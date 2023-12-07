@@ -12,11 +12,19 @@ terraform init
 # Validate Terraform configuration
 terraform validate
 
-# Apply Terraform configuration with auto-approval
-terraform apply -auto-approve
+# Check if validation was successful
+if [ $? -eq 0 ]; then
+    echo "Terraform validation successful. Proceeding with apply."
+    # Apply Terraform configuration with auto-approval
+    terraform apply -auto-approve
+    # Get Minikube IP
+    minikubeip=$(minikube ip)
+    echo "$(minikube ip) sonarqube.local" | sudo tee -a /etc/hosts
 
-# Get Minikube IP
-minikubeip=$(minikube ip)
+    # Print Sonarqube URL
+    echo "Sonarqube URL: http://sonarqube.local/"
+else
+    echo "Terraform validation failed. Please fix the configuration before applying."
+fi
 
-# Print Sonarqube URL
-echo "Sonarqube URL: http://$minikubeip/"
+

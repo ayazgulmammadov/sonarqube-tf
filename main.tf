@@ -48,7 +48,7 @@ resource "null_resource" "deploy_sonarqube_ingress" {
   provisioner "local-exec" {
     command = "kubectl apply -f sonarqube-ingress.yaml -n sonarqubens"
   }
-  depends_on   = [kubernetes_namespace.sonarqubens]
+  depends_on   = [helm_release.sonarqube]
 }
 
 resource "helm_release" "sonarqube" {
