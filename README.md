@@ -42,7 +42,7 @@ This script automates the installation of essential DevOps tools on a Linux syst
 2. **Run the installation script:**
 
     ```bash
-    ./install_devops_tools.sh
+    ./install-tools.sh.sh
     ```
 
 3. **Follow any on-screen instructions, if prompted.**
