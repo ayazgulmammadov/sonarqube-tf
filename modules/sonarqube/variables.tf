@@ -1,8 +1,3 @@
-variable "kubeconfig_path" {
-  description = "The path to the Kubernetes configuration file"
-  type        = string
-}
-
 variable "namespace" {
   description = "The Kubernetes namespace for deploying SonarQube"
   type        = string

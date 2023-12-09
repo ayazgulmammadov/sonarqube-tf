@@ -4,11 +4,21 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = ">=2.23.0"  # Specify the version you require
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">=2.12.1"
+    }
   }
 }
 
 provider "kubernetes" {
   config_path = var.kubeconfig_path # Adjust the path based on your kubeconfig location
+}
+
+provider "helm" {
+  kubernetes {
+    config_path = var.kubeconfig_path # Path to your Kubernetes config file
+  }
 }
 
 resource "kubernetes_namespace" "sonarqubens" {
@@ -20,7 +30,6 @@ resource "kubernetes_namespace" "sonarqubens" {
 module "sonarqube" {
   count                         = 1
   source                        = "./modules/sonarqube"
-  kubeconfig_path               = var.kubeconfig_path
   namespace                     = var.solution_namespace
   sonarqube_chart_repository    = var.sonarqube_chart_repository
   sonarqube_chart_version       = var.sonarqube_chart_version
@@ -45,7 +54,6 @@ module "postgresql" {
   postgresql_username         = var.postgresql_username
   postgresql_secret_name      = var.postgresql_secret_name
   postgresql_database         = var.postgresql_database
-  kubeconfig_path             = var.kubeconfig_path
   postgresql_secret_value     = var.postgresql_secret_value
   depends_on                  = [kubernetes_namespace.sonarqubens]
 }
