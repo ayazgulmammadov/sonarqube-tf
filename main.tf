@@ -1,8 +1,8 @@
 terraform {
   required_providers {
-    helm = {
-      source  = "hashicorp/helm"
-      version = "2.12.1"
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">=2.23.0"  # Specify the version you require
     }
   }
 }
@@ -11,107 +11,41 @@ provider "kubernetes" {
   config_path = var.kubeconfig_path # Adjust the path based on your kubeconfig location
 }
 
-provider "helm" {
-  kubernetes {
-    config_path = var.kubeconfig_path # Path to your Kubernetes config file
-  }
-}
-
 resource "kubernetes_namespace" "sonarqubens" {
   metadata {
-    name = var.sonarqube_namespace # Set the desired namespace name
+    name = var.solution_namespace # Set the desired namespace name
   }
 }
 
-resource "null_resource" "deploy_sonarqube_configmap" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      kubectl create configmap external-sonarqube-opts \
-        --from-literal SONARQUBE_JDBC_USERNAME=${var.postgresql_username} \
-        --from-literal SONARQUBE_DB_NAME=${var.postgresql_database} \
-        --from-literal SONARQUBE_DB_HOST=postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
-        --from-literal SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql.${var.sonarqube_namespace}.svc.cluster.local:5432/${var.postgresql_database} \
-        -n ${var.sonarqube_namespace}
-      EOT
-  }
-  depends_on = [kubernetes_namespace.sonarqubens]
+module "sonarqube" {
+  count                         = 1
+  source                        = "./modules/sonarqube"
+  kubeconfig_path               = var.kubeconfig_path
+  namespace                     = var.solution_namespace
+  sonarqube_chart_repository    = var.sonarqube_chart_repository
+  sonarqube_chart_version       = var.sonarqube_chart_version
+  sonarqube_chart_name          = var.sonarqube_chart_name
+  sonarqube_memory_limit        = var.sonarqube_memory_limit
+  sonarqube_persistence_enabled = var.sonarqube_persistence_enabled
+  sonarqube_secret_name         = var.sonarqube_secret_name
+  sonarqube_secret_value        = var.sonarqube_secret_value
+  sonarqube_configmap_name      = var.sonarqube_configmap_name
+  postgresql_enabled            = var.postgresql_enabled
+  sonarqube_db_name             = var.postgresql_database
+  sonarqube_db_username         = var.postgresql_username
+  depends_on                    = [kubernetes_namespace.sonarqubens, module.postgresql]
 }
 
-resource "null_resource" "deploy_sonarqube_secret" {
-  provisioner "local-exec" {
-    command = "kubectl apply -f ./kubernetes/sonarqube-secret.yaml -n ${var.sonarqube_namespace}"
-  }
-  depends_on = [kubernetes_namespace.sonarqubens]
-}
-
-resource "null_resource" "deploy_postgresql_secret" {
-  provisioner "local-exec" {
-    command = "kubectl apply -f ./kubernetes/postgresql-secret.yaml -n ${var.sonarqube_namespace}"
-  }
-  depends_on = [kubernetes_namespace.sonarqubens]
-}
-
-resource "null_resource" "deploy_sonarqube_ingress" {
-  provisioner "local-exec" {
-    command = "kubectl apply -f ./kubernetes/sonarqube-ingress.yaml -n ${var.sonarqube_namespace}"
-  }
-  depends_on = [helm_release.sonarqube]
-}
-
-resource "helm_release" "sonarqube" {
-  name       = "sonarqube"
-  repository = var.sonarqube_chart_repository
-  chart      = var.sonarqube_chart_name
-  version    = var.sonarqube_chart_version
-  namespace  = var.sonarqube_namespace
-  depends_on = [helm_release.postgresql, null_resource.deploy_sonarqube_configmap, null_resource.deploy_sonarqube_secret]
-
-
-  set {
-    name  = "resources.limits.memory"
-    value = var.sonarqube_memory_limit
-  }
-
-  set {
-    name  = "persistence.enabled"
-    value = var.sonarqube_persistence_enabled ? "true" : "false"
-  }
-
-  set {
-    name  = "postgresql.enabled"
-    value = "false"
-  }
-
-  set {
-    name  = "extraConfig.configmaps[0]"
-    value = "external-sonarqube-opts"
-  }
-
-  set {
-    name  = "extraConfig.secrets[0]"
-    value = "sonarqube-secret"
-  }
-}
-
-resource "helm_release" "postgresql" {
-  name       = "postgresql"
-  repository = var.postgresql_chart_repository
-  chart      = var.postgresql_chart_name
-  namespace  = var.sonarqube_namespace
-  depends_on = [kubernetes_namespace.sonarqubens, null_resource.deploy_postgresql_secret]
-
-  set {
-    name  = "auth.username"
-    value = var.postgresql_username
-  }
-
-  set {
-    name  = "auth.existingSecret"
-    value = "postgresql-secret"
-  }
-
-  set {
-    name  = "auth.database"
-    value = var.postgresql_database
-  }
+module "postgresql" {
+  count                       = 1
+  source                      = "./modules/postgresql"
+  postgresql_chart_repository = var.postgresql_chart_repository
+  postgresql_chart_name       = var.postgresql_chart_name
+  namespace                   = var.solution_namespace
+  postgresql_username         = var.postgresql_username
+  postgresql_secret_name      = var.postgresql_secret_name
+  postgresql_database         = var.postgresql_database
+  kubeconfig_path             = var.kubeconfig_path
+  postgresql_secret_value     = var.postgresql_secret_value
+  depends_on                  = [kubernetes_namespace.sonarqubens]
 }
